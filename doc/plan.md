@@ -237,6 +237,9 @@ Within the body, accesses to PPU registers call `nrt_ppu_sync(cycle_now)` the sa
 * **Asset separation (for section 12):** `generated/<g>/code/*.c` (derived from game code) is separate from `generated/<g>/assets/{prg,chr}.c` (pure data). A later "bring your own ROM" build can generate only the assets locally.
 
 ### 6.7 Build modes
+
+> **Updated after spike S1 (see m0_report.md):** the default `exact` build checks the deadline once per basic block against the block's worst-case cost and lets the interpreter single-step blocks that are close to an event; the per-instruction hook is for `trace` builds. This halves the code size and keeps events on the same instruction boundaries.
+
 | Mode | Hook | Use |
 |------|------|-----|
 | `exact` (default) | `NRT_STEP` before every instruction as above | all verification, all platforms at first |
@@ -321,7 +324,7 @@ The runtime produces a palette-index frame and PCM; palette -> RGB (with emphasi
 * Tests: headless Chromium (Playwright) boots the page, runs N frames through an exported `nrt_run_frame`, reads the framebuffer hash and compares it with FCEUX's digest for the same frame (same oracle values as desktop).
 
 ### 8.4 STM32 (platform/stm32, generic port layer; board chosen after the spike)
-**Memory budget spike (M0, no hardware needed):** compile the generated code of representative games with `arm-none-eabi-gcc -Os -mcpu=cortex-m7` and report `size` per game and mode (exact / interpreter-only / mixed). Planning figures to be verified, not trusted: NES PRG 16 KB ~ 3-6 k instructions; exact-mode code probably 20-40 bytes per instruction => NROM 16-32 KB games ~ 100-300 KB, 128 KB MMC3 games ~ 1 MB, Castlevania III (256 KB) > 2 MB.
+**Memory budget spike (M0, no hardware needed):** compile the generated code of representative games with `arm-none-eabi-gcc -Os -mcpu=cortex-m7` and report `size` per game and mode (exact / interpreter-only / mixed). **Measured (m0_report.md): 10-25 bytes of Thumb-2 per 6502 instruction => NROM games 55-95 KB, 128 KB MMC3 games 250-650 KB, Castlevania III 620 KB (about 1.0 MB with its PRG and CHR).**
 
 | Resource | Need | Notes |
 |----------|------|-------|
