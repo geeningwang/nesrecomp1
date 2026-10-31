@@ -1,0 +1,16 @@
+# build products: never commit anything derived from the games
+generated/
+out/
+build/
+*.nes
+*.o
+*.obj
+*.exe
+*.elf
+*.bin
+*.wasm
+__pycache__/
+*.pyc
+.vscode/
+# test products
+tests/work/

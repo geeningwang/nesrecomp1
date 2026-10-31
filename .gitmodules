@@ -1,0 +1,6 @@
+[submodule "deps/disassembly"]
+	path = deps/disassembly
+	url = https://github.com/geeningwang/NES-Games-Disassembly
+[submodule "deps/nes1"]
+	path = deps/nes1
+	url = https://github.com/geeningwang/nes1
