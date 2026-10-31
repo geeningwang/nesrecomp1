@@ -1,8 +1,8 @@
 # NES Recomp: turning the NES disassemblies into native games
 
-Status: PLAN for review (nothing implemented yet). Proposed home: a **new repository** `nesrecomp`
-(local directory `/Users/jingnw/nesrecomp`, sibling of `nes1`), with `nes1` and the disassembly repo as dependencies.
-Once approved, the first task copies this file to `nesrecomp/doc/plan.md`.
+Status: PLAN for review (nothing implemented yet). Proposed home: a **new repository** `nesrecomp1`
+(local directory `/Users/jingnw/nesrecomp1`, sibling of `nes1`), with `nes1` and the disassembly repo as dependencies.
+Once approved, the first task copies this file to `nesrecomp1/doc/plan.md`.
 
 ---------------------------------------------------------------------------------------------------
 
@@ -73,7 +73,7 @@ All 26 have a CDL file in `_misc` (checked for 15 directly, the rest assumed; co
 ## 2. Goals, non-goals, definition of done
 
 ### Goals
-1. `nesrecomp build <game> --platform <p>` produces a native game for each platform from the game's disassembly (or a ROM + its metadata).
+1. `nesrecomp1 build <game> --platform <p>` produces a native game for each platform from the game's disassembly (or a ROM + its metadata).
 2. The native game is **frame-, scanline- and instruction-identical to FCEUX** on recorded input (movies) for the tested frames (section 9).
 3. One code generator, one runtime core, thin platform layers (Windows, Linux/SteamOS, Web, STM32).
 4. Recompiled coverage is measured and reported per game; anything not covered still runs (interpreter).
@@ -126,10 +126,10 @@ Key ideas:
 
 ---------------------------------------------------------------------------------------------------
 
-## 4. Repository layout and dependencies (new repo `nesrecomp`)
+## 4. Repository layout and dependencies (new repo `nesrecomp1`)
 
 ```
-nesrecomp/
+nesrecomp1/
   README.md  LICENSE  CMakeLists.txt  pyproject.toml (tools)  .gitignore (generated/, out/, *.nes)
   deps/
     disassembly/        git submodule: geeningwang/NES-Games-Disassembly (pinned commit)
@@ -137,7 +137,7 @@ nesrecomp/
                         common/nesdump.h, FCEUX 2.6.6 sources with the dump instrumentation, parity docs)
   doc/                  plan.md (this file), design.md, runtime_contract.md, mappers.md, platforms/*.md,
                         fidelity_spec.md (new observations, extends nes1 doc/parity_spec.md), build_environment.md
-  tools/                build_rom.py  analyze.py  codegen.py  cdl.py  dbg.py  nesrecomp.py (CLI)
+  tools/                build_rom.py  analyze.py  codegen.py  cdl.py  dbg.py  nesrecomp1.py (CLI)
                         run_movie.py  make_input.py (FM2 -> input file)  coverage.py  oracle.ps1 / oracle.sh
   runtime/              include/nesrt.h (public API)  src/{cpu_ctx,bus,ppu,apu,interp,dump,trace,input}.c
                         src/mappers/{m000_nrom,m001_mmc1,m002_uxrom,m003_cnrom,m004_mmc3,m005_mmc5,m007_axrom,m091}.c
@@ -381,8 +381,8 @@ No per-mapper internal state is dumped: banking is visible through the CPU's PRG
 
 ## 10. Build, CI and environment
 
-* **Where things run:** Python tools on the Mac (pure Python 3); all C compilation and running on VMs. New VM `nesrecomp-linux-vm` (Ubuntu, e2-standard-4): build-essential, cmake, ninja, python3, cc65, emscripten, arm-none-eabi-gcc, renode, xvfb, chromium + playwright, libsdl2-dev. The Windows VM (`nes1-win-vm`) stays the MSVC build and the FCEUX oracle host. FCEUX digests for the movies are generated once per game and cached in `tests/golden/<game>/` (hashes only; never ROMs or dumps of copyrighted content).
-* **Scripts:** `tools/oracle.ps1` wraps "run FCEUX headless with these frames/input"; `tools/nesrecomp.py` CLI: `rom`, `analyze`, `generate`, `build`, `run-movie`, `compare`, `coverage`.
+* **Where things run:** Python tools on the Mac (pure Python 3); all C compilation and running on VMs. New VM `nesrecomp1-linux-vm` (Ubuntu, e2-standard-4): build-essential, cmake, ninja, python3, cc65, emscripten, arm-none-eabi-gcc, renode, xvfb, chromium + playwright, libsdl2-dev. The Windows VM (`nes1-win-vm`) stays the MSVC build and the FCEUX oracle host. FCEUX digests for the movies are generated once per game and cached in `tests/golden/<game>/` (hashes only; never ROMs or dumps of copyrighted content).
+* **Scripts:** `tools/oracle.ps1` wraps "run FCEUX headless with these frames/input"; `tools/nesrecomp1.py` CLI: `rom`, `analyze`, `generate`, `build`, `run-movie`, `compare`, `coverage`.
 * **CI:** GitHub Actions for what needs neither the oracle nor ROMs (tool unit tests, mapper-logic unit tests, codegen of our own test ROMs, platform builds incl. Emscripten and ARM). Oracle-dependent jobs run on the VMs by script (no ROM content ever in Actions).
 * **Docs:** `doc/build_environment.md` for both VMs (same style as nes1's) and per-platform build instructions.
 
@@ -485,7 +485,7 @@ Game order inside a wave: easiest first (fewest features used).
 3. How many movies replay cleanly in FCEUX 2.6.6 for the rebuilt ROM.
 4. Whether any game uses the PAL path or reads the region; all assumed NTSC.
 5. STM32 reference board (after S2).
-6. Name of the new repo on GitHub (assumed `nesrecomp`) and whether it is private.
+6. Name of the new repo on GitHub (assumed `nesrecomp1`) and whether it is private.
 
 ## Appendix A: per-game quick table (mapper, sizes, assets, from headers and `_misc` listings)
 
@@ -516,7 +516,7 @@ Game order inside a wave: easiest first (fewest features used).
 
 ## Appendix B: the daily oracle loop for a recompiled game
 
-1. `nesrecomp build mappy --platform desktop --mode trace` -> `out/mappy/nrt_test`
+1. `nesrecomp1 build mappy --platform desktop --mode trace` -> `out/mappy/nrt_test`
 2. `make_input.py mappy_walkthrough.fm2` -> `mappy.in`
 3. FCEUX: `fceux64 mappy.nes --dump o_f --frames 3000 --input mappy.in --digest --dump-frames all`
 4. Ours: `nrt_test mappy.nes --dump o_n --frames 3000 --input mappy.in --digest --dump-frames all`

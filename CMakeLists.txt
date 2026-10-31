@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(nesrecomp C CXX)
+project(nesrecomp1 C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 

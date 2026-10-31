@@ -14,7 +14,7 @@ Everything that must run happens on VMs:
 | VM | Role | Access |
 |----|------|--------|
 | `nes1-win-vm` (Windows Server 2022, existing) | MSVC builds, FCEUX oracle, cc65 for ROM rebuilds (`C:\work\nr\cc65\ca65.exe`, `ld65.exe`, taken from the disassembly repo), portable Python `C:\work\python\python.exe` | SSH as `nesuser`, see nes1 `doc/build_environment.md` |
-| `nesrecomp-linux-vm` (Ubuntu 22.04, planned) | GCC/Clang builds, Emscripten, `arm-none-eabi-gcc`, Renode, Xvfb, Playwright | created with a startup script (see below) |
+| `nesrecomp1-linux-vm` (Ubuntu 22.04, planned) | GCC/Clang builds, Emscripten, `arm-none-eabi-gcc`, Renode, Xvfb, Playwright | created with a startup script (see below) |
 
 ## Rebuilding ROMs on the Windows VM
 

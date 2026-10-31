@@ -1,4 +1,4 @@
-# nesrecomp
+# nesrecomp1
 
 Re-compiles NES games, given as ca65 disassemblies ([geeningwang/NES-Games-Disassembly](https://github.com/geeningwang/NES-Games-Disassembly)),
 into native programs for Windows, Linux (incl. SteamOS), the web (WebAssembly) and STM32 microcontrollers.
