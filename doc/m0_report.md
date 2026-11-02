@@ -1,6 +1,26 @@
 # M0 report: foundations and spikes
 
-Status of milestone M0 of [plan.md](plan.md). Everything here was measured; estimates are marked as such.
+Status of milestone M0 of [plan.md](plan.md). Object sizes below are experimental measurements,
+not evidence of instruction correctness, real-time performance or complete firmware fit.
+
+## Continuation validation
+
+- Windows MSVC 19.44 now compiles **C** operation code and links it with a **C++17** bus adapter.
+  CTest executes stack/memory/arithmetic and C ABI checks successfully.
+- CTest also runs 16 Python unit tests for metadata, source preparation, game-specific identity,
+  CHR-RAM/embedded-CHR/split output, missing assets, CDL and debug readers.
+- All 26 ROMs were rebuilt again with strict size and game-specific SHA-1/CRC checks: 25 match,
+  and only the exact known Nuts & Milk hash pair is accepted as an upstream exception.
+- Linux execution and complete-runtime validation remain open. No compiled native game has run yet.
+
+Reproduce on the Windows host:
+
+```
+cmake -S . -B build -A x64 -DPython3_EXECUTABLE=C:\work\python\python.exe
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+python tools/build_rom.py --all --ca65 <ca65.exe> --ld65 <ld65.exe>
+```
 
 ## 1. Stage A: all 26 disassemblies rebuild
 
@@ -27,9 +47,9 @@ Mapper/size table of section 1.2 of the plan is confirmed by the headers of the 
 | Super C | 424 | **424** | 19909 | 15524 (78 %) | 4385 |
 | The Legend of Zelda | 261 | **261** | 16893 | 15176 (90 %) | 1717 |
 
-* **Every CDL code run decodes exactly onto its end**, so the CDL gives reliable instruction boundaries; it is the primary seed
-  source. The ld65 labels (`sub_`, `loc_`, `vec_`; resolved to their bank through the object module) add code that the recorded
-  play sessions never executed.
+* Every tested CDL run decodes onto its end, but CODE flags also mark operands. This is supporting
+  evidence, not proof of all instruction starts. M2 must reconcile assembler metadata and executed-PC
+  evidence, including ambiguous/overlapping code.
 * What descent cannot reach is flow through jump tables / pointers (flagged `IND_CODE` in the CDL, used as extra entry points)
   and the data-vs-code ambiguity at the edges. The interpreter fallback covers anything missed, and the miss log of the
   dispatcher will close the rest (plan 5.2 step 5).
@@ -54,17 +74,19 @@ Measured on Mappy (5370 instructions), `-Os`, Cortex-M7:
 | no hook at all (lower bound) | 9.5 |
 | `-O2` instead of `-Os` | 14.2 |
 
-### Design decision taken from this: block-level deadline, interpreter near events
+### Experimental optimization: block-level deadline, interpreter near events
+
+The following describes the size experiment, not a verified timing implementation. The approved
+continuation restores eager, per-instruction execution as the correctness baseline. Block charging,
+event deadlines and flag elimination require parity tests before becoming production defaults.
 
 The per-instruction hook of the plan (section 6.3) cost 20 of 29.6 bytes per instruction. Replaced by:
 
 * **Exact mode = one deadline check per basic block** against the block's *worst-case* cost (base cycles plus every possible
   page-cross and taken-branch extra). If the deadline is farther away, the whole block runs and its base cycles are charged
   at once; bus I/O inside the block gets the exact time through `c->tadj`.
-* If the deadline is closer, the page function returns **before** the block and the runtime single-steps it with the
-  interpreter. Every event (NMI, frame-counter / DMC / mapper IRQ, end of a PPU slice) therefore lands on the same
-  instruction boundary as with a per-instruction check; the cost is only a few percent of blocks taking the slow path.
-  This keeps the parity contract (events at instruction boundaries, budget in dots, spec O-9) intact.
+* The intended slow path returns before a block and interprets near events. Its accuracy and cost
+  have not been measured. Mid-block I/O, IRQs, DMC stalls and state materialization must be covered.
 * Deadlines must be conservative (never later than the true event). Mapper IRQs that depend on PPU rendering position are
   computed by the PPU model as a lower bound.
 * The per-instruction hook (`--hook insn`) stays for **trace builds** (lockstep tests and the NESDUMP instruction hash).
@@ -106,16 +128,15 @@ All code the analysis found is recompiled (CDL + descent), which is an upper bou
 
 Findings:
 
-* **Everything fits in 1 MB flash except Castlevania III (about 1.0 MB with its 256 KB PRG + 128 KB CHR) and a few MMC3 games that
-  are close (Super C 0.9 MB).** The pessimistic 2 MB+ estimate of the plan was wrong by a factor of 3 thanks to the block
-  hook and flag liveness. The runtime itself (PPU, APU, mappers, interpreter) adds an estimated 40-70 KB.
+* The table covers generated object code plus ROM assets, not a linked runtime or firmware.
+  It does not establish that any board fits all games; verified scheduling and runtime costs may
+  increase these figures. The 40-70 KB runtime estimate remains unverified.
 * NROM games (the 9 simplest) need about 80-120 KB in total: they fit even an STM32F4 with 512 KB-1 MB.
 * Super C stands out at 24.5 bytes per instruction (indexed addressing everywhere); an obvious optimisation target (M9).
 * wasm32 objects are about 2x the Thumb size (uncompressed; gzip will take them far down); still only 0.1-1.2 MB.
 * Compile time of the biggest game (Super C, 650 KB of Thumb code) is a few seconds per page.
-* Estimate (to be verified on hardware / Renode with the DWT cycle counter in M7): the recompiled CPU needs only a few percent
-  of a Cortex-M7 at 216 MHz; the **PPU line renderer is the dominant cost** (61 440 pixels x 60 frames), roughly half of a
-  216 MHz core and comfortable at 480 MHz.
+* No target throughput has been measured. Functional simulator results cannot establish real
+  Cortex-M7 speed, external-memory/cache effects or display/audio timing.
 
 ## 5. STM32 reference board proposal (decision for you)
 
@@ -125,13 +146,14 @@ Findings:
 | **STM32H7B3I-DK** | 2 MB flash, 1.4 MB RAM, 64 MB OctoSPI, 16 MB SDRAM | 480x272 LTDC, audio codec, USB | everything from internal flash | 280 MHz, best headroom; costs more |
 | Nucleo-H743ZI + LCD shield | 2 MB / 1 MB RAM | needs a separate display/audio | everything | most work on peripherals |
 
-Recommendation: **STM32F746G-DISCO as the first target** (it is the usual board for NES-on-MCU work, the 8-bit CLUT of the LTDC
-shows the NES palette-index frame without conversion), with the HAL kept generic so the H7 is a board-support swap.
-Exact-mode PPU cost on the F746 is the risk; mitigation is a measurement in M7 before the board arrives and the H7B3I as fallback.
+Board selection is deferred until linked flash/RAM and real performance budgets are available.
+The F746/H7 boards above are candidates, not verified targets. A fixed 8-bit CLUT must also be
+checked against the full palette/emphasis encoding; conversion may be necessary.
 
 ## 6. Still open from M0
 
 * **Linux build VM not created**: `gcloud auth` for `admin@jingnw.altostrat.com` expired. Needs `gcloud auth login`. The startup
   script is ready (`doc/build_environment.md`). Until then MSVC on the Windows VM is the only place where code can be run.
-* The size/feasibility numbers above need MSVC and GCC compile checks of the generated C (M2).
+* The C/C++ ABI smoke is verified with MSVC. Whole-game generated-code semantics, GCC validation
+  and full runtime linking remain M1/M2 work.
 * `tools/analyze.py` is a report; the full code map with jump-table recognition is M2.

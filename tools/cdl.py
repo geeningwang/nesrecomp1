@@ -7,7 +7,7 @@ One byte per PRG ROM byte (CHR bytes follow); flags, as written by FCEUX's debug
     0x10 code reached indirectly (JMP (ind) / RTS-style computed jump target)
     0x20 data accessed indirectly (through a pointer)
     0x40 PCM sample data (DMC fetch)
-    0x80 *clear* = code was running from the $6000-$7FFF area
+    0x80 set = byte was accessed in the lower ($6000-$7FFF) CPU area
 """
 import os
 
@@ -16,7 +16,8 @@ CODE, DATA, IND_CODE, IND_DATA, PCM = 0x01, 0x02, 0x10, 0x20, 0x40
 
 class Cdl:
     def __init__(self, path, prg_size):
-        raw = open(path, "rb").read()
+        with open(path, "rb") as fh:
+            raw = fh.read()
         self.path = path
         self.prg = raw[:prg_size]
         self.chr = raw[prg_size:]

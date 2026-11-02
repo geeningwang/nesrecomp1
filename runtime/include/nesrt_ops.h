@@ -33,9 +33,15 @@ typedef struct nrt_cpu {
 } nrt_cpu;
 
 /* runtime services (runtime/src/bus.c) */
+#ifdef __cplusplus
+extern "C" {
+#endif
 uint8_t nrt_bus_read(nrt_cpu *c, uint16_t addr);
 void    nrt_bus_write(nrt_cpu *c, uint16_t addr, uint8_t v);
 uint16_t nrt_brk(nrt_cpu *c, uint16_t return_pc);   /* BRK: push, set I, returns the IRQ/BRK vector */
+#ifdef __cplusplus
+}
+#endif
 
 static inline uint8_t nrt_rd(nrt_cpu *c, uint16_t a)
 {

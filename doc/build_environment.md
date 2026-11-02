@@ -16,6 +16,19 @@ Everything that must run happens on VMs:
 | `nes1-win-vm` (Windows Server 2022, existing) | MSVC builds, FCEUX oracle, cc65 for ROM rebuilds (`C:\work\nr\cc65\ca65.exe`, `ld65.exe`, taken from the disassembly repo), portable Python `C:\work\python\python.exe` | SSH as `nesuser`, see nes1 `doc/build_environment.md` |
 | `nesrecomp1-linux-vm` (Ubuntu 22.04, planned) | GCC/Clang builds, Emscripten, `arm-none-eabi-gcc`, Renode, Xvfb, Playwright | created with a startup script (see below) |
 
+## Foundation tests
+
+```
+python -m unittest discover -s tests -p "test_*.py" -v
+cmake -S . -B build -A x64 -DPython3_EXECUTABLE=C:\work\python\python.exe
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
+
+The smoke target compiles operation macros as C and calls them from a C++17 adapter with C
+linkage. MSVC treats warnings as errors except C4127: constant flag masks are intentional in
+these generated-operation macros. This is a linkage/arithmetic test, not full runtime parity.
+
 ## Rebuilding ROMs on the Windows VM
 
 ```

@@ -2,10 +2,32 @@ cmake_minimum_required(VERSION 3.16)
 project(nesrecomp1 C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Filled in as the milestones land (see doc/plan.md):
-#   runtime/   (M1)   portable C runtime, built as a static library `nesrt`
+#   runtime/   (M1)   portable C++ core with a C ABI, built as a static library `nesrt`
 #   platform/  (M3+)  desktop / web / stm32 front ends
 if(EXISTS ${CMAKE_SOURCE_DIR}/runtime/CMakeLists.txt)
   add_subdirectory(runtime)
+endif()
+
+include(CTest)
+if(BUILD_TESTING AND NOT CMAKE_CROSSCOMPILING)
+  add_executable(nesrt_abi_smoke tests/abi_smoke.c tests/abi_smoke.cpp)
+  target_include_directories(nesrt_abi_smoke PRIVATE runtime/include)
+  if(MSVC)
+    # Flag masks in the generated-operation macros are intentionally compile-time constants.
+    target_compile_options(nesrt_abi_smoke PRIVATE /W4 /WX /wd4127)
+  else()
+    target_compile_options(nesrt_abi_smoke PRIVATE -Wall -Wextra -Werror)
+  endif()
+  add_test(NAME nesrt_abi_smoke COMMAND nesrt_abi_smoke)
+  find_package(Python3 COMPONENTS Interpreter)
+  if(Python3_Interpreter_FOUND)
+    add_test(NAME tools_unit COMMAND "${Python3_EXECUTABLE}" -m unittest discover -s tests -p "test_*.py")
+    set_tests_properties(tools_unit PROPERTIES WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
+  endif()
 endif()
