@@ -1,0 +1,5 @@
+# instructions executed in the verified movie runs that descent from the vectors/labels/CDL did not reach
+# (computed control flow); found with tools/coverage_report.py, see doc/recompiler.md
+F746
+F761
+F77C

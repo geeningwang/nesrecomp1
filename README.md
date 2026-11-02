@@ -7,7 +7,8 @@ The target is **bit-exactness against FCEUX 2.6.6**, using the parity tooling of
 
 Status: M0 foundation tests pass on Windows; M1 deterministic replay and NESDUMP 3 are verified against FCEUX;
 the portable runtime core (interpreter, mapper 0) matches FCEUX on the suite and nine NROM movies
-([doc/runtime.md](doc/runtime.md)). Recompiled game code is not implemented yet.
+([doc/runtime.md](doc/runtime.md)), and the first static recompiler (exact, one C function per instruction) produces
+linked native games that match FCEUX with 99.99998% generated execution ([doc/recompiler.md](doc/recompiler.md)).
 See [doc/plan.md](doc/plan.md).
 
 ```
@@ -37,6 +38,16 @@ by the disassembly; Nuts & Milk does not reproduce it even with the disassembly'
 ```
 python tools/analyze.py "Super C"
 ```
+
+## Stage C: recompile and link (exact mode)
+
+```
+python tools/gen_insn.py --game "Mappy"          # generated/mappy/nrt_game_code.c + nrt_game_data.c
+python tools/gen_registry.py mappy
+cmake -S . -B build -DNES1_DIR=<nes1> -DNRT_GAMES=mappy && cmake --build build --target nrt_native
+```
+`nrt_native` is the headless harness with the game's generated code and ROM image linked in; it takes the same
+command line as nes1/FCEUX. See [doc/recompiler.md](doc/recompiler.md).
 
 ## M1: normalize movie input
 

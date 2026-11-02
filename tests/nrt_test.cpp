@@ -4,19 +4,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <set>
 #include <vector>
 
 #include "common/nesdump.h"
 #include "nrt.h"
 
+#ifdef NRT_EMBEDDED_GAME
+// Built together with the output of tools/gen_insn.py + gen_registry.py: the games' PRG/CHR images and generated
+// code are linked in and found by the identity of the ROM given on the command line.
+extern "C" const nrt_game_entry nrt_game_registry[];
+extern "C" const unsigned nrt_game_registry_count;
+#endif
+
 namespace {
 
 struct Harness {
+    std::set<uint16_t> interpreted_pcs;   // PCs that ran in the interpreter although generated code is attached
     nrt_machine*      machine = nullptr;
     nesdump::Recorder rec;
     std::vector<uint8_t> prg32, chr;   // dump views: CPU $8000-$FFFF and PPU $0000-$1FFF
     std::vector<uint8_t> frame;
     int frame_no = 0;
+    bool track_coverage = false;
 
     void fill(nesdump::State& s) const
     {
@@ -63,6 +73,7 @@ struct Harness {
         Harness& h = *static_cast<Harness*>(ctx);
         nrt_state st;
         nrt_get_state(m, &st);
+        if (h.track_coverage && !nrt_has_code(m, st.pc)) h.interpreted_pcs.insert(st.pc);
         nesdump::Insn i;
         i.pc = st.pc;  i.op = nrt_cpu_peek(m, st.pc);
         i.a = st.a;  i.x = st.x;  i.y = st.y;  i.s = st.s;  i.p = st.p;
@@ -129,6 +140,20 @@ int main(int argc, char** argv)
     h.frame.assign(NRT_FRAME_BYTES, 0);
 
     nrt_cart cart = { prg.data(), (uint32_t)prg.size(), chr.data(), (uint32_t)chr.size(), vertical ? uint8_t(1) : uint8_t(0) };
+#ifdef NRT_EMBEDDED_GAME
+    // The ROM named on the command line must be one this executable was generated from; run from the linked image.
+    const nrt_game_entry* game = nullptr;
+    {
+        const uint64_t hash = nrt_rom_hash(&cart);
+        for (unsigned i = 0; i < nrt_game_registry_count; ++i)
+            if (nrt_game_registry[i].module->rom_hash == hash) game = &nrt_game_registry[i];
+    }
+    if (!game) {
+        fprintf(stderr, "error: %s is not a ROM this executable was generated from\n", cfg.rom.c_str());
+        return 2;
+    }
+    cart = *game->cart;
+#endif
     std::vector<uint8_t> storage(nrt_machine_size() + nrt_machine_align());
     void* aligned = storage.data();
     size_t space = storage.size();
@@ -144,6 +169,13 @@ int main(int argc, char** argv)
     ports.four_score = cfg.input.fourscore;
     ports.famicom_4player = cfg.input.ports[2] == 3;
     nrt_set_ports(h.machine, &ports);
+#ifdef NRT_EMBEDDED_GAME
+    if (!getenv("NRT_NO_CODE")) {   // NRT_NO_CODE=1: the same executable, interpreter only
+        const int rc = nrt_attach_code(h.machine, game->module);
+        if (rc) { fprintf(stderr, "error: generated code rejected (%d)\n", rc); return 2; }
+        h.track_coverage = true;
+    }
+#endif
     nrt_hooks hooks = { &h, Harness::on_instruction, Harness::on_scanline_end };
     nrt_set_hooks(h.machine, &hooks);
 
@@ -170,6 +202,17 @@ int main(int argc, char** argv)
         h.rec.end_frame();
     }
     h.rec.close(cfg.frames);
-    printf("nrt dump done: %d frames, output in %s\n", cfg.frames, cfg.outdir.c_str());
+    nrt_exec_stats stats;
+    nrt_get_exec_stats(h.machine, &stats);
+    {
+        const std::string path = cfg.outdir + "/coverage.txt";
+        if (FILE* f = fopen(path.c_str(), "w")) {
+            fprintf(f, "generated %llu\ninterpreted %llu\n", (unsigned long long)stats.generated, (unsigned long long)stats.interpreted);
+            for (uint16_t pc : h.interpreted_pcs) fprintf(f, "missed %04X\n", pc);
+            fclose(f);
+        }
+    }
+    printf("nrt dump done: %d frames, output in %s (generated %llu, interpreted %llu instructions)\n", cfg.frames,
+           cfg.outdir.c_str(), (unsigned long long)stats.generated, (unsigned long long)stats.interpreted);
     return 0;
 }

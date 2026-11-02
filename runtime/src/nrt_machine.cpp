@@ -28,7 +28,7 @@ void nrt_machine::run_ppu(int dots)
         }
         if (hooks.on_instruction) hooks.on_instruction(hooks.ctx, this);
         const uint64_t before = cpu.cycle;
-        cpu.step();
+        cpu.run_one();
         ppu_budget -= kDotsPerCpuCycle * (int)(cpu.cycle - before);
     }
 }
@@ -96,12 +96,46 @@ nrt_machine *nrt_machine_init(void *storage, size_t storage_size, const nrt_cart
     nrt_machine *m = (nrt_machine *)storage;
     memset(m, 0, sizeof(*m));
     m->frame = frame;
+    m->rom_hash = nrt_rom_hash(cart);
     m->ppudead = 2;
     m->cur_scanline = -1;
     m->apu.init(cart->prg, cart->prg_size - 1);
     m->ppu.init(cart->chr, cart->vertical_mirroring != 0, frame, &m->cpu);
     m->cpu.init(cart->prg, cart->prg_size - 1, &m->ppu, &m->apu);
     return m;
+}
+
+uint64_t nrt_rom_hash(const nrt_cart *cart)
+{
+    uint64_t h = 14695981039346656037ULL;
+    const uint32_t sizes[2] = { cart->prg_size, cart->chr_size };
+    for (int i = 0; i < 2; ++i)
+        for (int b = 0; b < 4; ++b) { h ^= (uint8_t)(sizes[i] >> (8 * b)); h *= 1099511628211ULL; }
+    for (uint32_t i = 0; i < cart->prg_size; ++i) { h ^= cart->prg[i]; h *= 1099511628211ULL; }
+    for (uint32_t i = 0; i < cart->chr_size; ++i) { h ^= cart->chr[i]; h *= 1099511628211ULL; }
+    return h;
+}
+
+int nrt_attach_code(nrt_machine *m, const nrt_code_module *module)
+{
+    if (!module) { m->cpu.code_slot = NULL; m->cpu.code_fns = NULL; return 0; }
+    if (module->abi != NRT_CODE_ABI || !module->slot || !module->fns) return -1;
+    if (module->prg_size != m->cpu.prg_mask + 1) return -2;
+    if (module->rom_hash != m->rom_hash) return -3;
+    m->cpu.code_slot = module->slot;
+    m->cpu.code_fns = module->fns;
+    return 0;
+}
+
+int nrt_has_code(const nrt_machine *m, uint16_t pc)
+{
+    return m->cpu.code_slot && pc >= 0x8000 && m->cpu.code_slot[(uint32_t)(pc - 0x8000) & m->cpu.prg_mask] != 0;
+}
+
+void nrt_get_exec_stats(const nrt_machine *m, nrt_exec_stats *out)
+{
+    out->generated = m->cpu.gen_count;
+    out->interpreted = m->cpu.interp_count;
 }
 
 void nrt_set_ports(nrt_machine *m, const nrt_ports *ports)

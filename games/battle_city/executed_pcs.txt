@@ -1,0 +1,2 @@
+# see games/mappy/executed_pcs.txt
+EC88

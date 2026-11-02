@@ -124,20 +124,16 @@ private:
     void y_increment();
 };
 
-struct Cpu {
-    uint16_t rpc;
-    uint8_t  rsp, ra, rx, ry, rp;
+// The registers are the canonical C-compatible state (nrt_exec.h) shared with generated code.
+struct Cpu : nrt_cpu_regs {
     uint8_t  ram[0x800];
     uint8_t  wram[0x2000];
     const uint8_t* prg;
     uint32_t prg_mask;
-    uint8_t  data_bus;
-    uint8_t  pending_instruction_cycles;
-    uint8_t  rpi;              // P as of the previous instruction start: the I flag the IRQ check sees
-    bool     jammed;
-    uint8_t  nmi_state;        // 0 none, 1 armed by a $2000 write, 2 due at the next instruction boundary
-    uint64_t cycle;
-    uint64_t apu_cycle;
+
+    const uint16_t*    code_slot;   // generated instructions: slot by PRG offset (0 = interpret) into code_fns, or NULL
+    const nrt_insn_fn* code_fns;
+    uint64_t gen_count, interp_count;
 
     uint8_t  pads[4];
     bool     four_score, famicom4;
@@ -152,7 +148,8 @@ struct Cpu {
     void reset();              // power-on reset
     void hot_reset();          // the RESET button
     void power();
-    bool step();               // false for an undefined opcode
+    bool step();               // interpret the instruction at rpc; false for an undefined opcode
+    void run_one();            // the generated instruction at rpc if there is one, else step()
     bool nmi();
     void arm_delayed_nmi() { if (nmi_state == 0) nmi_state = 1; }
     bool take_pending_nmi();
@@ -177,6 +174,7 @@ struct nrt_machine {
     int       kook;            // alternating pre-render length (0 -> 16 dots, 1 -> 15 dots)
     int       ppudead;         // frames still to run without vblank after power-on or reset
     int       cur_scanline;    // visible line being emulated, or -1
+    uint64_t  rom_hash;        // identity of the cart, checked when generated code is attached
 
     void run_ppu(int dots);
     void run_frame();

@@ -255,6 +255,7 @@ uint8_t Cpu::rd8(uint16_t a) const
 void Cpu::init(const uint8_t* prg_view, uint32_t mask, Ppu* p, Apu* a)
 {
 	memset(this, 0, sizeof(*this));
+	ram_ptr = ram;
 	prg = prg_view;
 	prg_mask = mask;
 	ppu = p;
@@ -394,6 +395,21 @@ void Cpu::mem_write(uint16_t addr, uint8_t val)
 	// $6000-$7FFF work RAM; writes to PRG ROM ($8000-$FFFF) and unmapped space are ignored
 	if (addr >= 0x6000 && addr < 0x8000)
 		wram[addr - 0x6000] = val;
+}
+
+// Runs the instruction at rpc: the generated function for it when the code map has one, otherwise the interpreter.
+void Cpu::run_one()
+{
+	if (code_slot && rpc >= 0x8000) {
+		const unsigned slot = code_slot[(uint32_t)(rpc - 0x8000) & prg_mask];
+		if (slot) {
+			++gen_count;
+			code_fns[slot - 1](this);
+			return;
+		}
+	}
+	++interp_count;
+	step();
 }
 
 bool Cpu::step()
@@ -1160,3 +1176,29 @@ void Cpu::irq()
 }
 
 }  // namespace nrt
+
+// ---- services for generated code (nrt_exec.h) ----
+
+extern "C" {
+
+// The start of every instruction: remember P for the IRQ check, then run the APU up to the end of the
+// instruction's base cost (spec O-25). Same steps as the top of Cpu::step().
+uint8_t nrt_x_begin(nrt_cpu_regs *r, uint8_t opcode, uint8_t apu_cycles)
+{
+	nrt::Cpu *c = static_cast<nrt::Cpu *>(r);
+	c->rpi = c->rp;
+	uint8_t fetched_bus = opcode;
+	const uint64_t target = c->cycle + apu_cycles;
+	const uint32_t stall = c->apu->advance((uint32_t)(target - c->apu_cycle), c->data_bus);
+	if (stall) fetched_bus = c->data_bus;   // a DMC fetch leaves its byte on the bus (spec O-25)
+	c->cycle += stall;
+	c->apu_cycle = target;
+	return fetched_bus;
+}
+
+uint8_t nrt_x_read(nrt_cpu_regs *r, uint16_t addr) { return static_cast<nrt::Cpu *>(r)->mem_read(addr); }
+void nrt_x_write(nrt_cpu_regs *r, uint16_t addr, uint8_t value) { static_cast<nrt::Cpu *>(r)->mem_write(addr, value); }
+uint8_t nrt_x_peek(nrt_cpu_regs *r, uint16_t addr) { return static_cast<nrt::Cpu *>(r)->rd8(addr); }
+
+}  // extern "C"
+

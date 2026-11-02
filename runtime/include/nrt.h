@@ -15,6 +15,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "nrt_exec.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -85,6 +87,20 @@ void nrt_power_cycle(nrt_machine *m);
 
 /* Emulate one frame: two "dead" frames without vblank follow every reset or power cycle. */
 void nrt_run_frame(nrt_machine *m);
+
+/* Identity of a cart for generated code: FNV-1a 64 over prg_size and chr_size (u32 little endian), then PRG, then CHR. */
+uint64_t nrt_rom_hash(const nrt_cart *cart);
+
+/* Attach generated code. Returns 0, or a negative value if it was generated for another ROM or ABI (nothing is
+ * attached then). Pass NULL to detach. */
+int nrt_attach_code(nrt_machine *m, const nrt_code_module *module);
+
+typedef struct nrt_exec_stats {
+    uint64_t generated;     /* instructions executed by generated functions */
+    uint64_t interpreted;   /* instructions executed by the interpreter */
+} nrt_exec_stats;
+void nrt_get_exec_stats(const nrt_machine *m, nrt_exec_stats *out);
+int  nrt_has_code(const nrt_machine *m, uint16_t pc);   /* nonzero if a generated function would run at pc */
 
 /* Test hook: continue at pc with the power-on registers of the nestest start state (P=$24, S=$FD). */
 void nrt_debug_set_pc(nrt_machine *m, uint16_t pc);

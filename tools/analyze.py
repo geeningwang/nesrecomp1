@@ -127,6 +127,10 @@ def descend(game, seeds):
                     unresolved.add((off, t))
                 else:
                     work.append(to)
+            if ins[0] == "BRK":
+                # BRK pushes the address of BRK + 2, so a handler normally resumes there (RTI)
+                off += 2
+                continue
             if not fall:
                 break
             off += ins[2] if ins[0] != "*KIL" else 0
