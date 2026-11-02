@@ -43,23 +43,35 @@ by line: Excitebike TAS (power, reset at frame 1), Excitebike playthrough (reset
 Ice Climber walkthrough (reset, power, reset at 1267, 1300, 1327) and Yie Ar Kung-Fu TAS. Removing
 the commands from a replay changes the digests at exactly those frames, so the check is sensitive.
 
-## Replay gate results (`tools/run_movie_gate.py`)
+## NESDUMP 3 (nes1 `2ea42f3`)
+
+The dump format now includes cartridge work RAM, the logical nametables, controller serial state
+and pending-interrupt state, and the comparison tools reject anything that is not version 3
+(old versions, missing or short sections, truncated files, mixed digest/full folders, manifests
+that disagree with the files). Digests are compared as streams. `tool/test_dump_format.py` flips one
+byte in each section and checks it is reported in both full and digest mode.
+
+Adding the new sections immediately found one real state difference: nes1 kept the whole byte of the
+last `$4016` write as its strobe state while FCEUX keeps bit 0 (no behavioural effect; fixed, O-43).
+
+## Replay gate results (`tools/run_movie_gate.py`, NESDUMP 3)
 
 | Tier | Games | Result |
 |---|---|---|
-| 3000 frames, every scanline, 10 trace frames + the last, native vs normalized | Mappy TAS and walkthrough, Pac-Man, Son Son, Tennis, the four command movies above | identical |
+| 3000 frames, every scanline, 10 trace frames + the last, native vs normalized | Mappy TAS and walkthrough (Four Score + Famicom adapter), Pac-Man, Son Son, Tennis, Excitebike TAS 2 and 4 and playthrough, Ice Climber walkthrough, Yie Ar Kung-Fu TAS | identical |
+| 10,000 frames (the whole movie) | Battle City misc (reset at frame 9990) | identical |
 | 30,000 frames, frame digests, same trace frames | Mappy walkthrough, Pac-Man, Son Son, Tennis | identical |
 
-The no-input suite (23 entries including the new probe) is identical at 3000 frames.
-Still not covered: Battle City, Nuts & Milk, and full-length movies (4,377 to 713,500 frames).
-Dr. Mario and the other mapper 1/3/4 titles need their mappers first.
+The no-input suite (23 entries) is identical at 3000 frames at every scanline.
+
+Not covered: full-length movies (4,377 to 713,500 frames). The Nuts & Milk movies cannot be used: their
+recorded ROM checksum belongs to the original ROM, while the disassembly rebuilds a different binary
+(see `m0_report.md`), so `make_input.py` correctly refuses them. Dr. Mario and the other mapper 1/3/4
+titles need their mappers first.
 
 ## Still required for M1
 
-1. Add NESDUMP 3 work RAM, logical nametable, controller and pending-interrupt state, plus
-   strict version/required-section comparison.
-2. Finish the remaining fixtures (Battle City, Nuts & Milk) and a full-length detached run, then
-   update the nes1 dependency pin.
-3. Implement the portable C++17 runtime/C ABI and prove its interpreter mode against the oracle.
+1. A full-length detached run (tiered policy) and an update of this table with its manifest.
+2. Implement the portable C++17 runtime/C ABI and prove its interpreter mode against the oracle.
 
 FDS commands are rejected when the replay file is read; they are never silently dropped.
