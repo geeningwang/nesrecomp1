@@ -26,7 +26,8 @@ def run(command, log):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--nes1-repo", required=True)
+    parser.add_argument("--nes1-repo", required=True, help="nes1 checkout: tools, FCEUX and (by default) nes1.exe")
+    parser.add_argument("--emulator", help="executable under test instead of nes1.exe (e.g. nrt_test.exe)")
     parser.add_argument("--rom", required=True)
     parser.add_argument("--movie", required=True)
     parser.add_argument("--work", required=True)
@@ -35,7 +36,7 @@ def main():
     parser.add_argument("--timeout", type=int, default=1800)
     args = parser.parse_args()
     repo = Path(args.nes1_repo)
-    nes1 = repo / "src" / "x64" / "Release" / "nes1.exe"
+    nes1 = Path(args.emulator) if args.emulator else repo / "src" / "x64" / "Release" / "nes1.exe"
     fceux = repo / "tool" / "fceux-2.6.6" / "vc" / "x64" / "Release" / "fceux64.exe"
     tool = repo / "tool"
     work = Path(args.work)

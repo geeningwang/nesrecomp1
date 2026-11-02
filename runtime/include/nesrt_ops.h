@@ -118,10 +118,12 @@ static inline uint16_t nrt_ptr_zp(nrt_cpu *c, uint8_t z)       /* 16-bit pointer
 /* ---- arithmetic / logic ---- */
 #define ADC(m, F) do { uint8_t _m = (m); unsigned _s = (unsigned)A + _m + c->fc; \
     if ((F) & FV) c->fv = ((~(A ^ _m) & (A ^ _s) & 0x80) != 0); \
-    if ((F) & FC) c->fc = _s > 0xFF; A = (uint8_t)_s; NZ(A, F); } while (0)
+    if ((F) & FC) { c->fc = _s > 0xFF; } \
+    A = (uint8_t)_s; NZ(A, F); } while (0)
 #define SBC(m, F) do { uint8_t _m = (uint8_t)~(m); unsigned _s = (unsigned)A + _m + c->fc; \
     if ((F) & FV) c->fv = ((~(A ^ _m) & (A ^ _s) & 0x80) != 0); \
-    if ((F) & FC) c->fc = _s > 0xFF; A = (uint8_t)_s; NZ(A, F); } while (0)
+    if ((F) & FC) { c->fc = _s > 0xFF; } \
+    A = (uint8_t)_s; NZ(A, F); } while (0)
 #define AND(m, F) do { A &= (m); NZ(A, F); } while (0)
 #define ORA(m, F) do { A |= (m); NZ(A, F); } while (0)
 #define EOR(m, F) do { A ^= (m); NZ(A, F); } while (0)

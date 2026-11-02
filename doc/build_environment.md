@@ -14,7 +14,7 @@ Everything that must run happens on VMs:
 | VM | Role | Access |
 |----|------|--------|
 | `nes1-win-vm` (Windows Server 2022, existing) | MSVC builds, FCEUX oracle, cc65 for ROM rebuilds (`C:\work\nr\cc65\ca65.exe`, `ld65.exe`, taken from the disassembly repo), portable Python `C:\work\python\python.exe` | SSH as `nesuser`, see nes1 `doc/build_environment.md` |
-| `nesrecomp1-linux-vm` (Ubuntu 22.04, planned) | GCC/Clang builds, Emscripten, `arm-none-eabi-gcc`, Renode, Xvfb, Playwright | created with a startup script (see below) |
+| `nesrecomp1-linux-vm` (Ubuntu 22.04, e2-standard-4, created) | GCC 11 / Clang builds, sanitizers, `arm-none-eabi-gcc` 10.3; later Emscripten, Renode, Xvfb, Playwright | SSH as the OS Login user `admin_jingnw_altostrat_com` straight to the external IP (`ssh -i ~/.ssh/google_compute_engine admin_jingnw_altostrat_com@<ip>`); `gcloud compute ssh` goes through IAP and fails with a 502 here |
 
 ## Foundation tests
 
@@ -38,10 +38,27 @@ C:\work\python\python.exe tools\build_rom.py --all --ca65 C:\work\nr\cc65\ca65.e
 (the repo is copied there with `tar`; the disassembly's `_misc` folders are not needed for the build).
 The outputs are copied back to the Mac for the Python analysis (`out/` is git-ignored).
 
-## Linux VM startup script
+## Linux VM
+
+Startup script (installs once, then touches `/var/lib/nesrecomp1-ready`):
 
 ```
-apt-get install -y build-essential cmake ninja-build python3 python3-pip git cc65 gcc-arm-none-eabi \
-  libnewlib-arm-none-eabi libsdl2-dev xvfb ccache clang unzip curl xxd nodejs npm
+apt-get install -y build-essential cmake ninja-build python3 python3-pip git clang gcc-arm-none-eabi \
+  libsdl2-dev xvfb unzip curl
 ```
-Emscripten (emsdk), Renode and Playwright are installed on top when their milestones start.
+cc65 is not installed there: ROMs are rebuilt on the Windows VM and copied over. Emscripten (emsdk), Renode and
+Playwright are installed on top when their milestones start.
+
+Two things that cost time and are worth knowing:
+
+- **ASan/UBSan crash at start-up on this kernel** (random `Segmentation fault` with no report, about one run in
+  four) because the kernel's `vm.mmap_rnd_bits` is larger than the sanitizer runtime supports. Run
+  `sudo sysctl -w vm.mmap_rnd_bits=28` before sanitizer runs (0 failures in 120 runs afterwards) and set
+  `ASAN_OPTIONS=detect_leaks=0`.
+- GCC is stricter than MSVC and Clang about the C macros of `runtime/include/nesrt_ops.h`; it rejected the
+  prototype's `ADC`/`SBC` macros (`-Wmisleading-indentation`) the first time anything was built with GCC.
+
+The Linux build-and-compare procedure that produced the numbers in `doc/runtime.md` is: build `nrt_test` with GCC,
+Clang and Clang+ASan/UBSan (`cmake -G Ninja -DNES1_DIR=<nes1 checkout>`), run it on the 23 suite ROMs and one
+replay with `--frames 3000 --digest --dump-frames all`, and `cmp` each `digest.txt` against the file produced by
+the MSVC build on the Windows VM.

@@ -5,15 +5,16 @@ into native programs for Windows, Linux (incl. SteamOS), the web (WebAssembly) a
 The target is **bit-exactness against FCEUX 2.6.6**, using the parity tooling of
 [geeningwang/nes1](https://github.com/geeningwang/nes1).
 
-Status: M0 foundation tests pass on Windows; M1 deterministic input replay is in progress.
-The portable runtime and a working recompiled game are not implemented yet.
+Status: M0 foundation tests pass on Windows; M1 deterministic replay and NESDUMP 3 are verified against FCEUX;
+the portable runtime core (interpreter, mapper 0) matches FCEUX on the suite and nine NROM movies
+([doc/runtime.md](doc/runtime.md)). Recompiled game code is not implemented yet.
 See [doc/plan.md](doc/plan.md).
 
 ```
 deps/disassembly   the 26 game disassemblies (git submodule)
 deps/nes1          emulator + FCEUX oracle + comparison tools (git submodule)
 tools/             Python tools: ROM rebuild, CDL/dbg readers, analysis, code generator
-runtime/           C++17 core with C ABI; generated game code remains C
+runtime/           C++17 core with C ABI (nrt.h); generated game code remains C
 platform/          platform layers: hal/, desktop/ (SDL2), web/, stm32/
 games/<game>/      per-game annotations (game.toml)
 doc/               plan, design, build environment, fidelity notes

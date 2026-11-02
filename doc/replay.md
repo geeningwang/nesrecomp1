@@ -72,6 +72,7 @@ titles need their mappers first.
 ## Still required for M1
 
 1. A full-length detached run (tiered policy) and an update of this table with its manifest.
-2. Implement the portable C++17 runtime/C ABI and prove its interpreter mode against the oracle.
+2. ~~Implement the portable C++17 runtime/C ABI and prove its interpreter mode against the oracle.~~ Done, see
+   [runtime.md](runtime.md).
 
 FDS commands are rejected when the replay file is read; they are never silently dropped.
