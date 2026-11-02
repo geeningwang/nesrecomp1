@@ -2,16 +2,18 @@
 
 Re-compiles NES games, given as ca65 disassemblies ([geeningwang/NES-Games-Disassembly](https://github.com/geeningwang/NES-Games-Disassembly)),
 into native programs for Windows, Linux (incl. SteamOS), the web (WebAssembly) and STM32 microcontrollers.
-The result is verified **bit-exactly against FCEUX 2.6.6** with the parity tooling of
+The target is **bit-exactness against FCEUX 2.6.6**, using the parity tooling of
 [geeningwang/nes1](https://github.com/geeningwang/nes1).
 
-Status: planning done, milestone M0 (foundations and spikes) in progress. See [doc/plan.md](doc/plan.md).
+Status: M0 foundation tests pass on Windows; M1 deterministic input replay is in progress.
+The portable runtime and a working recompiled game are not implemented yet.
+See [doc/plan.md](doc/plan.md).
 
 ```
 deps/disassembly   the 26 game disassemblies (git submodule)
 deps/nes1          emulator + FCEUX oracle + comparison tools (git submodule)
 tools/             Python tools: ROM rebuild, CDL/dbg readers, analysis, code generator
-runtime/           portable C runtime (CPU interface, bus, PPU, APU, mappers)
+runtime/           C++17 core with C ABI; generated game code remains C
 platform/          platform layers: hal/, desktop/ (SDL2), web/, stm32/
 games/<game>/      per-game annotations (game.toml)
 doc/               plan, design, build environment, fidelity notes
@@ -34,3 +36,14 @@ by the disassembly; Nuts & Milk does not reproduce it even with the disassembly'
 ```
 python tools/analyze.py "Super C"
 ```
+
+## M1: normalize movie input
+
+```
+python tools/make_input.py movie.fm2 --rom game.nes --output replay.in --frames 3000
+python -m unittest discover -s tests -p "test_*.py" -v
+```
+
+The converter preserves controller attachment, four pads and reset/power bits, and validates
+the FM2 ROM checksum. The current headless runner rejects nonzero reset/power commands until
+their execution is verified. See [doc/replay.md](doc/replay.md) for the contract and evidence.

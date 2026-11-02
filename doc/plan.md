@@ -1,12 +1,12 @@
 # nesrecomp1: milestone continuation plan
 
-Status: updated continuation plan for approval. The repository exists at
+Status: approved continuation plan, implementation in progress. The repository exists at
 `/Users/jingnw/nesrecomp1` and https://github.com/geeningwang/nesrecomp1.
 M0 produced rebuild tools, analysis and code-size experiments; M1 input work has begun in nes1.
-No repository files are changed during this planning turn.
+Foundation validation is complete on Windows; see [m0_report.md](m0_report.md).
+Controller replay implementation and evidence are recorded in [replay.md](replay.md).
 
-On approval, update `nesrecomp1/doc/plan.md` with this document, reconcile the M0 report with the
-verification actually performed, and resume the milestones below. The immediate execution target
+The immediate execution target
 is a verified M1 runtime, followed by M2's first genuinely recompiled game, Mappy. Continue the
 remaining roadmap in order only after the preceding acceptance gates pass.
 
@@ -34,7 +34,7 @@ Never put authentication values in git URLs, configuration, documentation, gener
 This section resolves the inconsistencies in the original design and takes precedence over the
 earlier size-spike assumptions. The M0-M9 roadmap is retained, not restarted.
 
-### C1. What is actually complete
+### C1. Snapshot at continuation approval
 
 | Item | Verified state | Remaining work |
 |------|----------------|----------------|
