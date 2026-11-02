@@ -33,13 +33,33 @@ separate nes1 checkout in the meantime.
 Evidence uses the locally rebuilt Mappy ROM and explicitly selected 3000-frame prefixes.
 It does not establish full-length movie coverage.
 
+## Reset and power commands
+
+nes1 `3f40791` executes FM2 reset and power commands in both runners at the start of their frame,
+power before reset, and models FCEUX's state semantics (spec O-41). Besides the `reset_state` probe
+(90 frames, four command frames, 150,320 trace instructions, identical dumps), movies with commands
+equal native FCEUX FM2 playback at every scanline for 3000 frames, with selected traces compared line
+by line: Excitebike TAS (power, reset at frame 1), Excitebike playthrough (resets at 528, 1055, 1611),
+Ice Climber walkthrough (reset, power, reset at 1267, 1300, 1327) and Yie Ar Kung-Fu TAS. Removing
+the commands from a replay changes the digests at exactly those frames, so the check is sensitive.
+
+## Replay gate results (`tools/run_movie_gate.py`)
+
+| Tier | Games | Result |
+|---|---|---|
+| 3000 frames, every scanline, 10 trace frames + the last, native vs normalized | Mappy TAS and walkthrough, Pac-Man, Son Son, Tennis, the four command movies above | identical |
+| 30,000 frames, frame digests, same trace frames | Mappy walkthrough, Pac-Man, Son Son, Tennis | identical |
+
+The no-input suite (23 entries including the new probe) is identical at 3000 frames.
+Still not covered: Battle City, Nuts & Milk, and full-length movies (4,377 to 713,500 frames).
+Dr. Mario and the other mapper 1/3/4 titles need their mappers first.
+
 ## Still required for M1
 
-1. Implement reset/power commands and prove their frame-boundary and state semantics.
-2. Add NESDUMP 3 work RAM, logical nametable, controller and pending-interrupt state, plus
+1. Add NESDUMP 3 work RAM, logical nametable, controller and pending-interrupt state, plus
    strict version/required-section comparison.
-3. Finish the full replay/regression gates and update the nes1 dependency.
-4. Implement the portable C++17 runtime/C ABI and prove its interpreter mode against the oracle.
+2. Finish the remaining fixtures (Battle City, Nuts & Milk) and a full-length detached run, then
+   update the nes1 dependency pin.
+3. Implement the portable C++17 runtime/C ABI and prove its interpreter mode against the oracle.
 
-Until reset/power execution is verified, commands are preserved in converted files but rejected
-by the normalized runners before any emulation. They are never silently dropped.
+FDS commands are rejected when the replay file is read; they are never silently dropped.

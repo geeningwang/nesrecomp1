@@ -45,5 +45,6 @@ python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
 The converter preserves controller attachment, four pads and reset/power bits, and validates
-the FM2 ROM checksum. The current headless runner rejects nonzero reset/power commands until
-their execution is verified. See [doc/replay.md](doc/replay.md) for the contract and evidence.
+the FM2 ROM checksum. Both headless runners execute reset and power commands; FDS commands are
+rejected. `tools/run_movie_gate.py` runs the whole oracle gate for one game and movie. See
+[doc/replay.md](doc/replay.md) for the contract and evidence.

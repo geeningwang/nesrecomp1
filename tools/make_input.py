@@ -3,8 +3,8 @@
 
     python tools/make_input.py movie.fm2 --rom game.nes --output replay.in [--frames N]
 
-NESINPUT frames contain command, pad1, pad2, pad3 and pad4 hex bytes. The runners
-currently reject nonzero reset/power commands until their execution is verified.
+NESINPUT frames contain command, pad1, pad2, pad3 and pad4 hex bytes. Reset (01) and power
+(02) are executed by both nes1 and the FCEUX runner; other command bits (FDS) are rejected.
 """
 import argparse
 import base64
